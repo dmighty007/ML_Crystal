@@ -33,9 +33,12 @@ def print_locations():
     # 2. deeptime
     deeptime_path = find_module_path("deeptime")
     if deeptime_path:
-        target_path = os.path.join(deeptime_path, "decomposition", "deep")
-        print(f"[deeptime] Deep decomposition path:\n{target_path}\n")
+        target_path_tae = os.path.join(deeptime_path, "decomposition", "deep")
+        target_path_data = os.path.join(deeptime_path, "utils")
+        print(f"[deeptime] Deep decomposition path:\n{target_path_tae}")
         print(f"  -> Look for '_tae.py' in this directory.\n")
+        print(f"[deeptime] Utils path:\n{target_path_data}")
+        print(f"  -> Look for 'data.py' in this directory.\n")
     else:
         print("[deeptime] Package not found.\n")
 
@@ -69,3 +72,36 @@ if __name__ == "__main__":
 1. Navigate to the `deeptime/decomposition/deep` directory.
 2. Replace the existing `_tae.py` file with the version provided in this repository:
    - Source: `./assets/_tae.py`
+
+
+## 4. deeptime Patch (Dataset)
+
+**Target:** `deeptime/utils/data.py`
+
+**Description:** Enable support for zero lagtime in `TrajectoryDataset`.
+
+**Instruction:**
+1. Navigate to the `deeptime/utils` directory.
+2. Open `data.py`.
+3. Replace the existing `TrajectoryDataset` class with the version provided below (or copy from `./assets/data.py`):
+
+```python
+class TrajectoryDataset(TimeLaggedDataset):
+    def __init__(self, lagtime, trajectory):
+        if lagtime < 0:
+            raise ValueError("lagtime must be >= 0")
+
+        if len(trajectory) <= lagtime:
+            raise TrajectoryTooShortError(
+                f"Not enough data (length={len(trajectory)}) to satisfy lagtime={lagtime}."
+            )
+
+        if lagtime == 0:
+            # x_t paired with itself (AE training)
+            super().__init__(trajectory, trajectory)
+        else:
+            super().__init__(trajectory[:-lagtime], trajectory[lagtime:])
+
+        self._trajectory = trajectory
+        self._lagtime = lagtime
+```
